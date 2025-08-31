@@ -19,6 +19,18 @@ export default function AnimationBar({
 }: AnimationBarProps) {
   return (
     <div className="flex items-center gap-4">
+      <button
+        onClick={onStep}
+        className="rounded bg-blue-600 px-3 py-1 text-white"
+      >
+        Next Step
+      </button>
+      <button
+        onClick={onReset}
+        className="rounded bg-gray-600 px-3 py-1 text-white"
+      >
+        Reset
+      </button>
       {isPlaying ? (
         <button
           onClick={onPause}
@@ -34,18 +46,6 @@ export default function AnimationBar({
           Play
         </button>
       )}
-      <button
-        onClick={onStep}
-        className="rounded bg-blue-600 px-3 py-1 text-white"
-      >
-        Step
-      </button>
-      <button
-        onClick={onReset}
-        className="rounded bg-gray-600 px-3 py-1 text-white"
-      >
-        Reset
-      </button>
       <div>
         <label className="mr-2">Vitesse:</label>
         <input
