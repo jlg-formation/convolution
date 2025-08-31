@@ -2,6 +2,7 @@ interface Step {
   valIn: number;
   valK: number;
   prod: number;
+  isPadding?: boolean; // Nouvelle propriété pour indiquer si c'est du padding
 }
 
 interface StepInspectorProps {
@@ -21,8 +22,14 @@ export default function StepInspector({ steps }: StepInspectorProps) {
       {steps.length > 0 && (
         <div>
           {steps.map((s, idx) => (
-            <div key={idx}>
-              ({s.valIn}×{s.valK}) = {s.prod}
+            <div key={idx} className={s.isPadding ? "text-blue-600" : ""}>
+              (
+              {s.isPadding ? (
+                <span title="Valeur de padding (zéro)">0 (padding)</span>
+              ) : (
+                s.valIn
+              )}
+              ×{s.valK}) = {s.prod}
             </div>
           ))}
           <div className="mt-2 font-bold">Somme partielle = {sum}</div>

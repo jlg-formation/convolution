@@ -29,7 +29,7 @@ export default function Demo() {
   const [currentPos, setCurrentPos] = useState<[number, number] | null>(null); // cellule sortie active (i,j)
   const [currentCell, setCurrentCell] = useState<[number, number] | null>(null); // cellule noyau active (u,v)
   const [partialSteps, setPartialSteps] = useState<
-    { valIn: number; valK: number; prod: number }[]
+    { valIn: number; valK: number; prod: number; isPadding?: boolean }[]
   >([]);
   const [isPlaying, setIsPlaying] = useState(false);
   const [speed, setSpeed] = useState(800);
@@ -93,17 +93,26 @@ export default function Demo() {
       const [u, v] = currentCellValue;
 
       // 1. Faire le calcul de la cellule courante
-      const ii = i * stride + u * dilation - padding;
-      const jj = j * stride + v * dilation - padding;
-      const valIn =
-        ii >= 0 && jj >= 0 && ii < input.length && jj < input[0].length
-          ? input[ii][jj]
-          : 0;
+      // Utiliser la même logique que conv2d : coordonnées dans la matrice paddée
+      const ii = i * stride + u * dilation;
+      const jj = j * stride + v * dilation;
+
+      // Convertir les coordonnées paddées vers les coordonnées originales
+      const originalI = ii - padding;
+      const originalJ = jj - padding;
+
+      const isPadding = !(
+        originalI >= 0 &&
+        originalJ >= 0 &&
+        originalI < input.length &&
+        originalJ < input[0].length
+      );
+      const valIn = isPadding ? 0 : input[originalI][originalJ];
       const valK = kernel[u][v];
       const prod = valIn * valK;
 
       // Ajouter à la trace partielle
-      setPartialSteps((steps) => [...steps, { valIn, valK, prod }]);
+      setPartialSteps((steps) => [...steps, { valIn, valK, prod, isPadding }]);
 
       // 2. Calculer la prochaine position du kernel
       let nextU = u;
@@ -186,10 +195,18 @@ export default function Demo() {
     const coords: [number, number][] = [];
     for (let u = 0; u < kernel.length; u++) {
       for (let v = 0; v < kernel[0].length; v++) {
-        const ii = i * stride + u * dilation - padding;
-        const jj = j * stride + v * dilation - padding;
-        if (ii >= 0 && jj >= 0 && ii < input.length && jj < input[0].length) {
-          coords.push([ii, jj]);
+        // Utiliser la même logique que conv2d et stepOnce
+        const ii = i * stride + u * dilation;
+        const jj = j * stride + v * dilation;
+        const originalI = ii - padding;
+        const originalJ = jj - padding;
+        if (
+          originalI >= 0 &&
+          originalJ >= 0 &&
+          originalI < input.length &&
+          originalJ < input[0].length
+        ) {
+          coords.push([originalI, originalJ]);
         }
       }
     }
@@ -200,10 +217,20 @@ export default function Demo() {
     if (!currentPos || !currentCell) return [];
     const [i, j] = currentPos;
     const [u, v] = currentCell;
-    const ii = i * stride + u * dilation - padding;
-    const jj = j * stride + v * dilation - padding;
-    if (ii >= 0 && jj >= 0 && ii < input.length && jj < input[0].length) {
-      return [[ii, jj]];
+
+    // Utiliser la même logique que dans stepOnce et conv2d
+    const ii = i * stride + u * dilation;
+    const jj = j * stride + v * dilation;
+    const originalI = ii - padding;
+    const originalJ = jj - padding;
+
+    if (
+      originalI >= 0 &&
+      originalJ >= 0 &&
+      originalI < input.length &&
+      originalJ < input[0].length
+    ) {
+      return [[originalI, originalJ]];
     }
     return [];
   };
@@ -238,6 +265,16 @@ export default function Demo() {
         setDilation={setDilation}
         onCompute={handleCompute}
       />
+
+      {padding > 0 && (
+        <div className="rounded border border-blue-200 bg-blue-50 p-3">
+          <p className="text-sm text-blue-800">
+            ℹ️ <strong>Padding = {padding}</strong> : La matrice d'entrée est
+            entourée de <strong>zéros</strong> sur {padding} pixel(s) de chaque
+            côté.
+          </p>
+        </div>
+      )}
 
       <AnimationBar
         isPlaying={isPlaying}
