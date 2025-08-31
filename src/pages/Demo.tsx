@@ -51,18 +51,6 @@ export default function Demo() {
         dilation={config.dilation}
       />
 
-      <div className="grid grid-cols-2 gap-6">
-        <div>
-          <h2 className="mb-2 font-semibold">Matrice d'entrée</h2>
-          {/* grille principale éditable */}
-          <Grid matrix={input} setMatrix={setInput} />
-        </div>
-        <div>
-          <h2 className="mb-2 font-semibold">Noyau (Kernel)</h2>
-          <KernelEditor kernel={kernel} setKernel={setKernel} />
-        </div>
-      </div>
-
       {/* Note sur le calcul automatique */}
       <div className="rounded border border-green-200 bg-green-50 p-3">
         <p className="text-sm text-green-800">

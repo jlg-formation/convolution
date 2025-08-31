@@ -1,8 +1,7 @@
 import { useConvolutionStore } from "../state/useStore";
 
 export default function ConvolutionParameters() {
-  const { config, setPadding, setStride, setDilation, computeConvolution } =
-    useConvolutionStore();
+  const { config, setPadding, setStride, setDilation } = useConvolutionStore();
 
   const { padding, stride, dilation } = config;
   return (
@@ -112,34 +111,6 @@ export default function ConvolutionParameters() {
             {dilation === 1 && "Kernel standard (contigu)"}
             {dilation === 2 && "Kernel dilaté (champ réceptif élargi)"}
             {dilation > 2 && `Kernel très dilaté (${dilation}x)`}
-          </div>
-        </div>
-      </div>
-
-      {/* Bouton de calcul manuel (optionnel) */}
-      <div className="mt-6 flex justify-center">
-        <button
-          onClick={computeConvolution}
-          className="rounded bg-green-600 px-6 py-2 text-white hover:bg-green-700"
-        >
-          Recalculer manuellement
-        </button>
-      </div>
-
-      {/* Informations complémentaires */}
-      <div className="mt-4 rounded bg-gray-50 p-3">
-        <h4 className="mb-2 text-sm font-medium text-gray-700">
-          Effets sur la sortie :
-        </h4>
-        <div className="grid grid-cols-1 gap-2 text-xs text-gray-600 md:grid-cols-3">
-          <div>
-            <strong>Padding ↑</strong> : Taille sortie ↑
-          </div>
-          <div>
-            <strong>Stride ↑</strong> : Taille sortie ↓
-          </div>
-          <div>
-            <strong>Dilation ↑</strong> : Champ réceptif ↑
           </div>
         </div>
       </div>
