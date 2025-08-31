@@ -108,7 +108,7 @@ export default function AnimationDemo() {
       nextU = u + 1;
       nextV = 0;
     } else {
-      // Fin du balayage du noyau
+      // Fin du balayage du noyau - la cellule actuelle est maintenant complète
       shouldResetSteps = true;
       nextU = 0;
       nextV = 0;
@@ -128,24 +128,17 @@ export default function AnimationDemo() {
     // 3. Appliquer tous les changements d'état de manière séparée
     console.log("about to set partialSteps");
 
-    // Mettre à jour partialSteps
+    // Mettre à jour partialSteps - TOUJOURS ajouter le calcul actuel
     if (shouldResetSteps) {
+      // Nouvelle cellule de sortie : commencer avec le calcul actuel
       setPartialSteps([{ valIn, valK, prod, isPadding }]);
     } else {
+      // Continuer le calcul de la cellule actuelle : ajouter le calcul actuel
       const currentSteps = partialSteps;
       console.log("setPartialSteps", { valIn, valK, prod, isPadding });
-      // Protection contre les doublons en mode strict
-      const alreadyExists = currentSteps.some(
-        (step) =>
-          step.valIn === valIn &&
-          step.valK === valK &&
-          step.prod === prod &&
-          step.isPadding === isPadding,
-      );
 
-      if (!alreadyExists) {
-        setPartialSteps([...currentSteps, { valIn, valK, prod, isPadding }]);
-      }
+      // Ajouter le calcul actuel (sans vérification de doublon car on avance séquentiellement)
+      setPartialSteps([...currentSteps, { valIn, valK, prod, isPadding }]);
     }
 
     // Mettre à jour les positions
@@ -170,16 +163,49 @@ export default function AnimationDemo() {
     setIsPlaying(false);
     clearTimer();
 
-    // Initialiser les positions si nécessaire
-    if (!currentPos) {
-      setCurrentPos([0, 0]);
-      setCurrentCell([0, 0]);
-      setPartialSteps([]);
-      return; // Premier clic = juste initialisation, on s'arrête là
-    }
-    if (!currentCell) {
-      setCurrentCell([0, 0]);
-      return; // Deuxième clic = initialisation kernel, on s'arrête là
+    // Initialiser les positions si nécessaire ET faire le premier calcul
+    if (!currentPos || !currentCell) {
+      console.log("Initializing and calculating first step...");
+      const initialPos: [number, number] = [0, 0];
+      const initialCell: [number, number] = [0, 0];
+
+      // Faire le premier calcul directement avec les valeurs initiales
+      const [i, j] = initialPos;
+      const [u, v] = initialCell;
+
+      const ii = i * stride + u * dilation;
+      const jj = j * stride + v * dilation;
+      const originalI = ii - padding;
+      const originalJ = jj - padding;
+
+      const isPadding = !(
+        originalI >= 0 &&
+        originalJ >= 0 &&
+        originalI < input.length &&
+        originalJ < input[0].length
+      );
+      const valIn = isPadding ? 0 : input[originalI][originalJ];
+      const valK = kernel[u][v];
+      const prod = valIn * valK;
+
+      // Calculer la prochaine position après le premier calcul
+      let nextU = u;
+      let nextV = v;
+
+      // Avancer dans le kernel
+      if (v + 1 < kernel[0].length) {
+        nextV = v + 1;
+      } else if (u + 1 < kernel.length) {
+        nextU = u + 1;
+        nextV = 0;
+      }
+
+      // Mettre à jour tous les états en même temps avec la position suivante
+      setCurrentPos(initialPos);
+      setCurrentCell([nextU, nextV]); // Position suivante pour le prochain step
+      setPartialSteps([{ valIn, valK, prod, isPadding }]);
+
+      return;
     }
 
     // Sinon, on fait un pas normal
@@ -212,9 +238,16 @@ export default function AnimationDemo() {
   };
 
   const getCurrentCellHighlight = (): [number, number][] => {
-    if (!currentPos || !currentCell) return [];
+    if (!currentPos || partialSteps.length === 0) return [];
+
     const [i, j] = currentPos;
-    const [u, v] = currentCell;
+
+    // Calculer quelle cellule du kernel correspond au dernier calcul
+    // En fonction du nombre d'étapes déjà effectuées
+    const kernelSize = kernel.length * kernel[0].length;
+    const stepIndex = (partialSteps.length - 1) % kernelSize;
+    const u = Math.floor(stepIndex / kernel[0].length);
+    const v = stepIndex % kernel[0].length;
 
     // Utiliser la même logique que dans stepOnce et conv2d
     const ii = i * stride + u * dilation;
@@ -234,8 +267,15 @@ export default function AnimationDemo() {
   };
 
   const getKernelHighlight = (): [number, number][] => {
-    if (!currentCell) return [];
-    return [currentCell];
+    if (partialSteps.length === 0) return [];
+
+    // Surligner la cellule du kernel correspondant au dernier calcul
+    const kernelSize = kernel.length * kernel[0].length;
+    const stepIndex = (partialSteps.length - 1) % kernelSize;
+    const u = Math.floor(stepIndex / kernel[0].length);
+    const v = stepIndex % kernel[0].length;
+
+    return [[u, v]];
   };
 
   const getOutputAnimationState = () => {
@@ -263,9 +303,18 @@ export default function AnimationDemo() {
       }
     }
 
+    // La cellule actuelle est en cours de calcul si on n'est pas à la fin du kernel
+    // Sinon elle est considérée comme complète
+    const isCurrentCellComplete =
+      !currentCell ||
+      (currentCell[0] === kernel.length - 1 &&
+        currentCell[1] === kernel[0].length - 1);
+
     return {
-      currentCell: currentPos,
-      completedCells,
+      currentCell: isCurrentCellComplete ? null : currentPos,
+      completedCells: isCurrentCellComplete
+        ? [...completedCells, currentPos]
+        : completedCells,
       pendingCells,
     };
   };
@@ -331,7 +380,7 @@ export default function AnimationDemo() {
         </div>
       )}
 
-      {currentPos && currentCell && (
+      {currentPos && (
         <StepInspector
           input={input}
           kernel={kernel}
