@@ -37,6 +37,7 @@ export default function Demo() {
   // Timer & re-entrance guards (browser)
   const intervalRef = useRef<number | null>(null);
   const steppingRef = useRef(false);
+  const stepOnceRef = useRef<() => void>(() => {});
 
   // Dimensions sortie (simple, on calcule via conv2d)
   const tempOut = conv2d(input, kernel, { padding, stride, dilation });
@@ -54,16 +55,16 @@ export default function Demo() {
     }
   };
 
-  const startTimer = () => {
-    clearTimer();
-    intervalRef.current = window.setInterval(() => {
-      stepOnce();
-    }, speed);
-  };
-
   // Effect: play/pause
   useEffect(() => {
-    if (isPlaying) startTimer();
+    const start = () => {
+      clearTimer();
+      intervalRef.current = window.setInterval(() => {
+        if (stepOnceRef.current) stepOnceRef.current();
+      }, speed);
+    };
+
+    if (isPlaying) start();
     else clearTimer();
     return clearTimer;
   }, [isPlaying, speed]);
@@ -74,10 +75,10 @@ export default function Demo() {
     steppingRef.current = true;
 
     setCurrentPos((prevPos) => {
-      let [i, j] = prevPos ?? [0, 0];
+      const [i, j] = prevPos ?? [0, 0];
 
       setCurrentCell((prevCell) => {
-        let [u, v] = prevCell ?? [0, 0];
+        const [u, v] = prevCell ?? [0, 0];
 
         // Coordonnées dans l’entrée pour (u,v)
         const ii = i * stride + u * dilation - padding;
@@ -126,10 +127,26 @@ export default function Demo() {
     });
   };
 
+  // Assigner stepOnce à la ref pour l'utiliser dans useEffect
+  stepOnceRef.current = stepOnce;
+
   // Bouton STEP: on PAUSE d'abord, puis on fait un seul pas
   const doStep = () => {
     setIsPlaying(false);
     clearTimer();
+
+    // Initialiser les positions si nécessaire
+    if (!currentPos) {
+      setCurrentPos([0, 0]);
+      setCurrentCell([0, 0]);
+      setPartialSteps([]);
+      return;
+    }
+    if (!currentCell) {
+      setCurrentCell([0, 0]);
+      return;
+    }
+
     stepOnce();
   };
 
@@ -150,7 +167,7 @@ export default function Demo() {
     return coords;
   };
 
-  const getCurrentCellHighlight = () => {
+  const getCurrentCellHighlight = (): [number, number][] => {
     if (!currentPos || !currentCell) return [];
     const [i, j] = currentPos;
     const [u, v] = currentCell;
@@ -162,7 +179,7 @@ export default function Demo() {
     return [];
   };
 
-  const getKernelHighlight = () => {
+  const getKernelHighlight = (): [number, number][] => {
     if (!currentCell) return [];
     return [currentCell];
   };
@@ -197,8 +214,11 @@ export default function Demo() {
         isPlaying={isPlaying}
         onPlay={() => {
           // init si nécessaire
-          if (!currentPos) setCurrentPos([0, 0]);
-          if (!currentCell) setCurrentCell([0, 0]);
+          if (!currentPos) {
+            setCurrentPos([0, 0]);
+            setCurrentCell([0, 0]);
+            setPartialSteps([]);
+          }
           setIsPlaying(true);
         }}
         onPause={() => {
