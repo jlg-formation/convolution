@@ -46,6 +46,44 @@ export default function Demo() {
   const outH = tempOut.length;
   const outW = tempOut[0]?.length || 0;
 
+  // Auto-calcul du résultat quand les matrices ou paramètres changent
+  useEffect(() => {
+    try {
+      // Vérifier si les dimensions sont valides
+      if (
+        input.length > 0 &&
+        input[0].length > 0 &&
+        kernel.length > 0 &&
+        kernel[0].length > 0
+      ) {
+        // Vérifier que le kernel n'est pas plus grand que l'input (avec padding)
+        const maxInputDim = Math.max(input.length, input[0].length);
+        const maxKernelDim = Math.max(kernel.length, kernel[0].length);
+
+        if (maxKernelDim <= maxInputDim + 2 * padding) {
+          const result = conv2d(input, kernel, { padding, stride, dilation });
+
+          // Vérifier que le résultat n'est pas vide
+          if (result.length > 0 && result[0].length > 0) {
+            setOutput(result);
+
+            // Réinitialiser l'animation si elle était en cours
+            if (currentPos || currentCell) {
+              setCurrentPos(null);
+              setCurrentCell(null);
+              setPartialSteps([]);
+              setIsPlaying(false);
+              clearTimer();
+            }
+          }
+        }
+      }
+    } catch (error) {
+      // En cas d'erreur, on ne met pas à jour le résultat
+      console.warn("Erreur lors du calcul automatique:", error);
+    }
+  }, [input, kernel, padding, stride, dilation, currentPos, currentCell]);
+
   const handleCompute = () => {
     setOutput(conv2d(input, kernel, { padding, stride, dilation }));
   };
