@@ -9,6 +9,7 @@ interface GridProps {
     currentCell?: [number, number] | null; // cellule en cours de calcul (jaune)
     completedCells?: [number, number][]; // cellules déjà calculées
     pendingCells?: [number, number][]; // cellules pas encore calculées (gris avec X)
+    partialSum?: number; // somme partielle à afficher dans la cellule courante
   };
 }
 
@@ -59,6 +60,8 @@ export default function Grid({
               if (animationState) {
                 if (isCurrentOutputCell(i, j)) {
                   bg = "bg-yellow-300"; // Cellule en cours de calcul
+                  // Afficher la somme partielle au lieu de la valeur finale
+                  content = animationState.partialSum ?? cell;
                 } else if (isCompletedOutputCell(i, j)) {
                   bg = "bg-white"; // Cellule calculée
                 } else if (isPendingOutputCell(i, j)) {

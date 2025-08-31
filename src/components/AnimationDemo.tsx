@@ -303,19 +303,19 @@ export default function AnimationDemo() {
       }
     }
 
-    // La cellule actuelle est en cours de calcul si on n'est pas à la fin du kernel
-    // Sinon elle est considérée comme complète
-    const isCurrentCellComplete =
-      !currentCell ||
-      (currentCell[0] === kernel.length - 1 &&
-        currentCell[1] === kernel[0].length - 1);
+    // La cellule actuelle (currentPos) est TOUJOURS en cours de calcul
+    // tant qu'on a des partialSteps, même si le kernel est à la fin
+    // Elle correspond à la cellule dont on voit les calculs détaillés
+    const hasPartialSteps = partialSteps.length > 0;
+
+    // Calculer la somme partielle pour l'afficher dans la cellule jaune
+    const partialSum = partialSteps.reduce((acc, step) => acc + step.prod, 0);
 
     return {
-      currentCell: isCurrentCellComplete ? null : currentPos,
-      completedCells: isCurrentCellComplete
-        ? [...completedCells, currentPos]
-        : completedCells,
+      currentCell: hasPartialSteps ? currentPos : null,
+      completedCells,
       pendingCells,
+      partialSum: hasPartialSteps ? partialSum : undefined,
     };
   };
 
