@@ -1,6 +1,12 @@
 import { useState } from "react";
 import Grid from "./Grid";
 
+interface Preset {
+  name: string;
+  description: string;
+  matrix: number[][];
+}
+
 interface EditableMatrixProps {
   matrix: number[][];
   setMatrix: (matrix: number[][]) => void;
@@ -8,6 +14,7 @@ interface EditableMatrixProps {
   minSize?: number;
   maxSize?: number;
   defaultValue?: number;
+  presets?: Preset[];
 }
 
 export default function EditableMatrix({
@@ -17,9 +24,11 @@ export default function EditableMatrix({
   minSize = 1,
   maxSize = 10,
   defaultValue = 0,
+  presets = [],
 }: EditableMatrixProps) {
   const [rows, setRows] = useState(matrix.length);
   const [cols, setCols] = useState(matrix[0]?.length || 1);
+  const [selectedPreset, setSelectedPreset] = useState("");
 
   const handleDimensionChange = (newRows: number, newCols: number) => {
     // Valider les dimensions
@@ -59,6 +68,17 @@ export default function EditableMatrix({
     setMatrix(newMatrix);
   };
 
+  const handlePresetSelect = (presetName: string) => {
+    const preset = presets.find((p) => p.name === presetName);
+    if (preset) {
+      const presetMatrix = preset.matrix;
+      setRows(presetMatrix.length);
+      setCols(presetMatrix[0].length);
+      setMatrix(presetMatrix);
+      setSelectedPreset(presetName);
+    }
+  };
+
   return (
     <div className="rounded-lg border bg-white p-4 shadow-sm">
       <div className="mb-4 flex items-center justify-between">
@@ -78,6 +98,36 @@ export default function EditableMatrix({
           </button>
         </div>
       </div>
+
+      {/* Presets (si disponibles) */}
+      {presets.length > 0 && (
+        <div className="mb-4">
+          <label className="mb-2 block text-sm font-medium">
+            Presets disponibles:
+          </label>
+          <div className="flex flex-wrap gap-2">
+            {presets.map((preset) => (
+              <button
+                key={preset.name}
+                onClick={() => handlePresetSelect(preset.name)}
+                className={`rounded px-3 py-1 text-sm transition-colors ${
+                  selectedPreset === preset.name
+                    ? "bg-indigo-600 text-white"
+                    : "bg-indigo-100 text-indigo-700 hover:bg-indigo-200"
+                }`}
+                title={preset.description}
+              >
+                {preset.name}
+              </button>
+            ))}
+          </div>
+          {selectedPreset && (
+            <div className="mt-2 text-xs text-gray-600">
+              {presets.find((p) => p.name === selectedPreset)?.description}
+            </div>
+          )}
+        </div>
+      )}
 
       {/* Contrôles des dimensions */}
       <div className="mb-4 flex gap-4">

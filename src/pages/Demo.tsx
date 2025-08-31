@@ -1,12 +1,13 @@
 import { useState, useEffect, useRef } from "react";
 import Grid from "../components/Grid";
 import KernelEditor from "../components/KernelEditor";
-import ControlsPanel from "../components/ControlsPanel";
 import AnimationBar from "../components/AnimationBar";
 import StepInspector from "../components/StepInspector";
 import ConvolutionVisualization from "../components/ConvolutionVisualization";
+import ConvolutionParameters from "../components/ConvolutionParameters";
 import EditableMatrix from "../components/EditableMatrix";
 import { conv2d } from "../logic/convolution";
+import { kernelPresets, inputPresets } from "../logic/presets";
 
 export default function Demo() {
   const [input, setInput] = useState<number[][]>([
@@ -297,6 +298,18 @@ export default function Demo() {
   return (
     <div className="space-y-6">
       <h1 className="text-2xl font-bold">Démo Convolution</h1>
+
+      {/* Paramètres de convolution */}
+      <ConvolutionParameters
+        padding={padding}
+        setPadding={setPadding}
+        stride={stride}
+        setStride={setStride}
+        dilation={dilation}
+        setDilation={setDilation}
+        onCompute={handleCompute}
+      />
+
       {/* Édition des matrices */}
       <div className="grid grid-cols-2 gap-6">
         <EditableMatrix
@@ -306,6 +319,7 @@ export default function Demo() {
           minSize={3}
           maxSize={15}
           defaultValue={0}
+          presets={inputPresets}
         />
         <EditableMatrix
           matrix={kernel}
@@ -314,6 +328,7 @@ export default function Demo() {
           minSize={1}
           maxSize={7}
           defaultValue={0}
+          presets={kernelPresets}
         />
       </div>
       {/* Vue conceptuelle de la convolution */}
@@ -335,16 +350,16 @@ export default function Demo() {
           <h2 className="mb-2 font-semibold">Noyau (Kernel)</h2>
           <KernelEditor kernel={kernel} setKernel={setKernel} />
         </div>
-      </div>{" "}
-      <ControlsPanel
-        padding={padding}
-        setPadding={setPadding}
-        stride={stride}
-        setStride={setStride}
-        dilation={dilation}
-        setDilation={setDilation}
-        onCompute={handleCompute}
-      />
+      </div>
+
+      {/* Note sur le calcul automatique */}
+      <div className="rounded border border-green-200 bg-green-50 p-3">
+        <p className="text-sm text-green-800">
+          ✅ <strong>Calcul automatique</strong> : Le résultat se met à jour
+          automatiquement quand vous modifiez les matrices ou paramètres.
+        </p>
+      </div>
+
       {padding > 0 && (
         <div className="rounded border border-blue-200 bg-blue-50 p-3">
           <p className="text-sm text-blue-800">
