@@ -2,17 +2,22 @@ interface GridProps {
   matrix: number[][];
   setMatrix?: (m: number[][]) => void;
   readOnly?: boolean;
-  highlight?: [number, number][]; // coordonnées (i,j) à mettre en surbrillance
+  highlightCurrent?: [number, number][]; // jaune
+  highlightKernel?: [number, number][]; // vert
 }
 
 export default function Grid({
   matrix,
   setMatrix,
   readOnly,
-  highlight = [],
+  highlightCurrent = [],
+  highlightKernel = [],
 }: GridProps) {
-  const isHighlighted = (i: number, j: number) =>
-    highlight.some(([r, c]) => r === i && c === j);
+  const isCurrent = (i: number, j: number) =>
+    highlightCurrent.some(([r, c]) => r === i && c === j);
+
+  const isKernel = (i: number, j: number) =>
+    highlightKernel.some(([r, c]) => r === i && c === j);
 
   const handleChange = (i: number, j: number, value: string) => {
     if (!setMatrix) return;
@@ -27,27 +32,27 @@ export default function Grid({
       <tbody>
         {matrix.map((row, i) => (
           <tr key={i}>
-            {row.map((cell, j) => (
-              <td
-                key={j}
-                className={`border border-gray-400 ${
-                  isHighlighted(i, j) ? "bg-yellow-200" : ""
-                }`}
-              >
-                {readOnly ? (
-                  <div className="flex h-10 w-10 items-center justify-center">
-                    {cell}
-                  </div>
-                ) : (
-                  <input
-                    type="number"
-                    value={cell}
-                    onChange={(e) => handleChange(i, j, e.target.value)}
-                    className="h-10 w-10 border-none text-center outline-none"
-                  />
-                )}
-              </td>
-            ))}
+            {row.map((cell, j) => {
+              let bg = "";
+              if (isKernel(i, j)) bg = "bg-green-200";
+              if (isCurrent(i, j)) bg = "bg-yellow-300";
+              return (
+                <td key={j} className={`border border-gray-400 ${bg}`}>
+                  {readOnly ? (
+                    <div className="flex h-10 w-10 items-center justify-center">
+                      {cell}
+                    </div>
+                  ) : (
+                    <input
+                      type="number"
+                      value={cell}
+                      onChange={(e) => handleChange(i, j, e.target.value)}
+                      className="h-10 w-10 border-none text-center outline-none"
+                    />
+                  )}
+                </td>
+              );
+            })}
           </tr>
         ))}
       </tbody>

@@ -23,16 +23,22 @@ export default function Demo() {
   const [stride, setStride] = useState(1);
   const [dilation, setDilation] = useState(1);
 
-  // Résultat complet (calcul instantané)
   const [output, setOutput] = useState<number[][]>([]);
 
-  // Animation state
-  const [currentPos, setCurrentPos] = useState<[number, number] | null>(null);
+  // Animation states
+  const [currentPos, setCurrentPos] = useState<[number, number] | null>(null); // cellule sortie active (i,j)
+  const [currentCell, setCurrentCell] = useState<[number, number] | null>(null); // cellule noyau active (u,v)
+  const [partialSteps, setPartialSteps] = useState<
+    { valIn: number; valK: number; prod: number }[]
+  >([]);
   const [isPlaying, setIsPlaying] = useState(false);
   const [speed, setSpeed] = useState(800);
-  const intervalRef = useRef<NodeJS.Timeout | null>(null);
 
-  // Pre-calc output dimensions
+  // Timer & re-entrance guards (browser)
+  const intervalRef = useRef<number | null>(null);
+  const steppingRef = useRef(false);
+
+  // Dimensions sortie (simple, on calcule via conv2d)
   const tempOut = conv2d(input, kernel, { padding, stride, dilation });
   const outH = tempOut.length;
   const outW = tempOut[0]?.length || 0;
@@ -41,32 +47,94 @@ export default function Demo() {
     setOutput(conv2d(input, kernel, { padding, stride, dilation }));
   };
 
-  // Animation stepping
-  const step = () => {
-    setCurrentPos((prev) => {
-      if (!prev) return [0, 0];
-      const [i, j] = prev;
-      if (j + 1 < outW) return [i, j + 1];
-      if (i + 1 < outH) return [i + 1, 0];
-      setIsPlaying(false);
-      return null;
+  const clearTimer = () => {
+    if (intervalRef.current !== null) {
+      window.clearInterval(intervalRef.current);
+      intervalRef.current = null;
+    }
+  };
+
+  const startTimer = () => {
+    clearTimer();
+    intervalRef.current = window.setInterval(() => {
+      stepOnce();
+    }, speed);
+  };
+
+  // Effect: play/pause
+  useEffect(() => {
+    if (isPlaying) startTimer();
+    else clearTimer();
+    return clearTimer;
+  }, [isPlaying, speed]);
+
+  // === Un seul "pas" d'animation ===
+  const stepOnce = () => {
+    if (steppingRef.current) return;
+    steppingRef.current = true;
+
+    setCurrentPos((prevPos) => {
+      let [i, j] = prevPos ?? [0, 0];
+
+      setCurrentCell((prevCell) => {
+        let [u, v] = prevCell ?? [0, 0];
+
+        // Coordonnées dans l’entrée pour (u,v)
+        const ii = i * stride + u * dilation - padding;
+        const jj = j * stride + v * dilation - padding;
+        const valIn =
+          ii >= 0 && jj >= 0 && ii < input.length && jj < input[0].length
+            ? input[ii][jj]
+            : 0;
+        const valK = kernel[u][v];
+        const prod = valIn * valK;
+
+        // trace partielle
+        setPartialSteps((steps) => [...steps, { valIn, valK, prod }]);
+
+        // avancer d'UNE cellule dans le noyau
+        if (v + 1 < kernel[0].length) {
+          steppingRef.current = false;
+          return [u, v + 1];
+        }
+        if (u + 1 < kernel.length) {
+          steppingRef.current = false;
+          return [u + 1, 0];
+        }
+
+        // Fin du balayage du noyau -> reset des steps et avancer la cellule de sortie
+        setPartialSteps([]);
+
+        if (j + 1 < outW) {
+          setCurrentPos([i, j + 1]);
+          steppingRef.current = false;
+          return [0, 0];
+        }
+        if (i + 1 < outH) {
+          setCurrentPos([i + 1, 0]);
+          steppingRef.current = false;
+          return [0, 0];
+        }
+
+        // Fin totale
+        setIsPlaying(false);
+        steppingRef.current = false;
+        return null;
+      });
+
+      return [i, j];
     });
   };
 
-  // Gestion lecture automatique
-  useEffect(() => {
-    if (isPlaying) {
-      intervalRef.current = setInterval(step, speed);
-    } else {
-      if (intervalRef.current) clearInterval(intervalRef.current);
-    }
-    return () => {
-      if (intervalRef.current) clearInterval(intervalRef.current);
-    };
-  }, [isPlaying, speed]);
+  // Bouton STEP: on PAUSE d'abord, puis on fait un seul pas
+  const doStep = () => {
+    setIsPlaying(false);
+    clearTimer();
+    stepOnce();
+  };
 
-  // Fonction pour trouver les coordonnées couvertes par le kernel
-  const getHighlight = (pos: [number, number] | null) => {
+  // Highlights
+  const getKernelCoverage = (pos: [number, number] | null) => {
     if (!pos) return [];
     const [i, j] = pos;
     const coords: [number, number][] = [];
@@ -82,6 +150,23 @@ export default function Demo() {
     return coords;
   };
 
+  const getCurrentCellHighlight = () => {
+    if (!currentPos || !currentCell) return [];
+    const [i, j] = currentPos;
+    const [u, v] = currentCell;
+    const ii = i * stride + u * dilation - padding;
+    const jj = j * stride + v * dilation - padding;
+    if (ii >= 0 && jj >= 0 && ii < input.length && jj < input[0].length) {
+      return [[ii, jj]];
+    }
+    return [];
+  };
+
+  const getKernelHighlight = () => {
+    if (!currentCell) return [];
+    return [currentCell];
+  };
+
   return (
     <div className="space-y-6">
       <h1 className="text-2xl font-bold">Démo Convolution</h1>
@@ -89,6 +174,7 @@ export default function Demo() {
       <div className="grid grid-cols-2 gap-6">
         <div>
           <h2 className="mb-2 font-semibold">Matrice d’entrée</h2>
+          {/* grille principale éditable */}
           <Grid matrix={input} setMatrix={setInput} />
         </div>
         <div>
@@ -109,9 +195,17 @@ export default function Demo() {
 
       <AnimationBar
         isPlaying={isPlaying}
-        onPlay={() => setIsPlaying(true)}
-        onPause={() => setIsPlaying(false)}
-        onStep={step}
+        onPlay={() => {
+          // init si nécessaire
+          if (!currentPos) setCurrentPos([0, 0]);
+          if (!currentCell) setCurrentCell([0, 0]);
+          setIsPlaying(true);
+        }}
+        onPause={() => {
+          setIsPlaying(false);
+          clearTimer();
+        }}
+        onStep={doStep}
         speed={speed}
         setSpeed={setSpeed}
       />
@@ -125,20 +219,36 @@ export default function Demo() {
 
       {currentPos && (
         <div className="grid grid-cols-2 gap-6">
-          <Grid
-            matrix={input}
-            setMatrix={setInput}
-            highlight={getHighlight(currentPos)}
-          />
-          <StepInspector
-            input={input}
-            kernel={kernel}
-            topLeft={[
-              currentPos[0] * stride - padding,
-              currentPos[1] * stride - padding,
-            ]}
-          />
+          <div>
+            <h2 className="mb-2 font-semibold">Entrée (surbrillance)</h2>
+            <Grid
+              matrix={input}
+              setMatrix={setInput}
+              highlightCurrent={getCurrentCellHighlight()}
+              highlightKernel={getKernelCoverage(currentPos)}
+            />
+          </div>
+          <div>
+            <h2 className="mb-2 font-semibold">Kernel (surbrillance)</h2>
+            <KernelEditor
+              kernel={kernel}
+              setKernel={setKernel}
+              highlight={getKernelHighlight()}
+            />
+          </div>
         </div>
+      )}
+
+      {currentPos && currentCell && (
+        <StepInspector
+          input={input}
+          kernel={kernel}
+          topLeft={[
+            currentPos[0] * stride - padding,
+            currentPos[1] * stride - padding,
+          ]}
+          steps={partialSteps}
+        />
       )}
     </div>
   );
