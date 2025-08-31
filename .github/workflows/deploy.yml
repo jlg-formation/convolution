@@ -25,7 +25,7 @@ jobs:
           fetch-depth: 0 # Not needed if lastUpdated is not enabled
       - uses: oven-sh/setup-bun@v2
         with:
-          bun-version: 1.2.19
+          bun-version: 1.2.21
       - name: Setup Pages
         uses: actions/configure-pages@v4
       - name: Install dependencies
