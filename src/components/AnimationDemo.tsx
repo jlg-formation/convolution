@@ -1,5 +1,6 @@
 import { useEffect, useRef } from "react";
 import Grid from "./Grid";
+import PaddedGrid from "./PaddedGrid";
 import KernelEditor from "./KernelEditor";
 import AnimationBar from "./AnimationBar";
 import StepInspector from "./StepInspector";
@@ -378,13 +379,25 @@ export default function AnimationDemo() {
         {currentPos && (
           <div className="grid grid-cols-3 gap-6">
             <div>
-              <h3 className="mb-2 font-semibold">Entrée (surbrillance)</h3>
-              <Grid
-                matrix={input}
-                setMatrix={setInput}
-                highlightCurrent={getCurrentCellHighlight()}
-                highlightKernel={getKernelCoverage(currentPos)}
-              />
+              <h3 className="mb-2 font-semibold">
+                Entrée (surbrillance){padding > 0 && ` - Padding: ${padding}`}
+              </h3>
+              {padding > 0 ? (
+                <PaddedGrid
+                  matrix={input}
+                  setMatrix={setInput}
+                  padding={padding}
+                  highlightCurrent={getCurrentCellHighlight()}
+                  highlightKernel={getKernelCoverage(currentPos)}
+                />
+              ) : (
+                <Grid
+                  matrix={input}
+                  setMatrix={setInput}
+                  highlightCurrent={getCurrentCellHighlight()}
+                  highlightKernel={getKernelCoverage(currentPos)}
+                />
+              )}
             </div>
             <div>
               <h3 className="mb-2 font-semibold">Kernel (surbrillance)</h3>
