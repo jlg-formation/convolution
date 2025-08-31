@@ -56,6 +56,26 @@ export default function AnimationDemo() {
     return clearTimer;
   }, [isPlaying, speed]);
 
+  // Effect: reset animation when input parameters change
+  useEffect(() => {
+    // Reset animation state when matrices or config change
+    setIsPlaying(false);
+    setCurrentPos(null);
+    setCurrentCell(null);
+    setPartialSteps([]);
+    clearTimer();
+  }, [
+    input,
+    kernel,
+    padding,
+    stride,
+    dilation,
+    setIsPlaying,
+    setCurrentPos,
+    setCurrentCell,
+    setPartialSteps,
+  ]);
+
   // === Un seul "pas" d'animation ===
   const stepOnce = () => {
     console.log("stepOnce");
@@ -212,6 +232,16 @@ export default function AnimationDemo() {
     stepOnce();
   };
 
+  // Bouton RESET: remettre l'animation à zéro
+  const doReset = () => {
+    console.log("doReset");
+    setIsPlaying(false);
+    setCurrentPos(null);
+    setCurrentCell(null);
+    setPartialSteps([]);
+    clearTimer();
+  };
+
   // Highlights
   const getKernelCoverage = (pos: [number, number] | null) => {
     if (!pos) return [];
@@ -339,6 +369,7 @@ export default function AnimationDemo() {
           clearTimer();
         }}
         onStep={doStep}
+        onReset={doReset}
         speed={speed}
         setSpeed={setSpeed}
       />

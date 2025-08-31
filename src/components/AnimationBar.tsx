@@ -3,6 +3,7 @@ interface AnimationBarProps {
   onPlay: () => void;
   onPause: () => void;
   onStep: () => void;
+  onReset: () => void;
   speed: number;
   setSpeed: (v: number) => void;
 }
@@ -12,6 +13,7 @@ export default function AnimationBar({
   onPlay,
   onPause,
   onStep,
+  onReset,
   speed,
   setSpeed,
 }: AnimationBarProps) {
@@ -37,6 +39,12 @@ export default function AnimationBar({
         className="rounded bg-blue-600 px-3 py-1 text-white"
       >
         Step
+      </button>
+      <button
+        onClick={onReset}
+        className="rounded bg-gray-600 px-3 py-1 text-white"
+      >
+        Reset
       </button>
       <div>
         <label className="mr-2">Vitesse:</label>
