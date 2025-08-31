@@ -74,65 +74,84 @@ export default function Demo() {
     if (steppingRef.current) return;
     steppingRef.current = true;
 
-    if (!currentPos || !currentCell) {
-      steppingRef.current = false;
-      return;
-    }
-
-    const [i, j] = currentPos;
-    const [u, v] = currentCell;
-
-    // 1. D'abord faire le calcul de la cellule courante
-    const ii = i * stride + u * dilation - padding;
-    const jj = j * stride + v * dilation - padding;
-    const valIn =
-      ii >= 0 && jj >= 0 && ii < input.length && jj < input[0].length
-        ? input[ii][jj]
-        : 0;
-    const valK = kernel[u][v];
-    const prod = valIn * valK;
-
-    // trace partielle
-    setPartialSteps((steps) => [...steps, { valIn, valK, prod }]);
-
-    // 2. Ensuite avancer à la cellule suivante
+    // Utiliser une seule fonction pour mettre à jour tous les états de manière atomique
     setCurrentPos((prevPos) => {
-      const [i, j] = prevPos ?? [0, 0];
+      if (!prevPos) {
+        steppingRef.current = false;
+        return prevPos;
+      }
 
-      setCurrentCell((prevCell) => {
-        const [u, v] = prevCell ?? [0, 0];
+      const [i, j] = prevPos;
 
-        // avancer d'UNE cellule dans le noyau
-        if (v + 1 < kernel[0].length) {
-          steppingRef.current = false;
-          return [u, v + 1];
-        }
-        if (u + 1 < kernel.length) {
-          steppingRef.current = false;
-          return [u + 1, 0];
-        }
+      // Récupérer currentCell de manière synchrone
+      const currentCellValue = currentCell;
+      if (!currentCellValue) {
+        steppingRef.current = false;
+        return prevPos;
+      }
 
-        // Fin du balayage du noyau -> reset des steps et avancer la cellule de sortie
-        setPartialSteps([]);
+      const [u, v] = currentCellValue;
 
+      // 1. Faire le calcul de la cellule courante
+      const ii = i * stride + u * dilation - padding;
+      const jj = j * stride + v * dilation - padding;
+      const valIn =
+        ii >= 0 && jj >= 0 && ii < input.length && jj < input[0].length
+          ? input[ii][jj]
+          : 0;
+      const valK = kernel[u][v];
+      const prod = valIn * valK;
+
+      // Ajouter à la trace partielle
+      setPartialSteps((steps) => [...steps, { valIn, valK, prod }]);
+
+      // 2. Calculer la prochaine position du kernel
+      let nextU = u;
+      let nextV = v;
+      let nextI = i;
+      let nextJ = j;
+      let shouldResetSteps = false;
+      let shouldStop = false;
+
+      // Avancer dans le kernel
+      if (v + 1 < kernel[0].length) {
+        nextV = v + 1;
+      } else if (u + 1 < kernel.length) {
+        nextU = u + 1;
+        nextV = 0;
+      } else {
+        // Fin du balayage du noyau
+        shouldResetSteps = true;
+        nextU = 0;
+        nextV = 0;
+
+        // Avancer la cellule de sortie
         if (j + 1 < outW) {
-          setCurrentPos([i, j + 1]);
-          steppingRef.current = false;
-          return [0, 0];
+          nextJ = j + 1;
+        } else if (i + 1 < outH) {
+          nextI = i + 1;
+          nextJ = 0;
+        } else {
+          // Fin totale
+          shouldStop = true;
         }
-        if (i + 1 < outH) {
-          setCurrentPos([i + 1, 0]);
-          steppingRef.current = false;
-          return [0, 0];
-        }
+      }
 
-        // Fin totale
+      // Appliquer les changements
+      if (shouldResetSteps) {
+        setPartialSteps([]);
+      }
+
+      if (shouldStop) {
         setIsPlaying(false);
+        setCurrentCell(null);
         steppingRef.current = false;
         return null;
-      });
-
-      return [i, j];
+      } else {
+        setCurrentCell([nextU, nextV]);
+        steppingRef.current = false;
+        return [nextI, nextJ];
+      }
     });
   };
 
