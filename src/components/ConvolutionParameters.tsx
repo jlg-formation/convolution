@@ -1,22 +1,10 @@
-interface ConvolutionParametersProps {
-  padding: number;
-  setPadding: (value: number) => void;
-  stride: number;
-  setStride: (value: number) => void;
-  dilation: number;
-  setDilation: (value: number) => void;
-  onCompute?: () => void;
-}
+import { useConvolutionStore } from "../state/useStore";
 
-export default function ConvolutionParameters({
-  padding,
-  setPadding,
-  stride,
-  setStride,
-  dilation,
-  setDilation,
-  onCompute,
-}: ConvolutionParametersProps) {
+export default function ConvolutionParameters() {
+  const { config, setPadding, setStride, setDilation, computeConvolution } =
+    useConvolutionStore();
+
+  const { padding, stride, dilation } = config;
   return (
     <div className="rounded-lg border bg-white p-6 shadow-sm">
       <h3 className="mb-4 text-lg font-semibold">Paramètres de convolution</h3>
@@ -129,16 +117,14 @@ export default function ConvolutionParameters({
       </div>
 
       {/* Bouton de calcul manuel (optionnel) */}
-      {onCompute && (
-        <div className="mt-6 flex justify-center">
-          <button
-            onClick={onCompute}
-            className="rounded bg-green-600 px-6 py-2 text-white hover:bg-green-700"
-          >
-            Recalculer manuellement
-          </button>
-        </div>
-      )}
+      <div className="mt-6 flex justify-center">
+        <button
+          onClick={computeConvolution}
+          className="rounded bg-green-600 px-6 py-2 text-white hover:bg-green-700"
+        >
+          Recalculer manuellement
+        </button>
+      </div>
 
       {/* Informations complémentaires */}
       <div className="mt-4 rounded bg-gray-50 p-3">

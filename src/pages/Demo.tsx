@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useEffect, useRef } from "react";
 import Grid from "../components/Grid";
 import KernelEditor from "../components/KernelEditor";
 import AnimationBar from "../components/AnimationBar";
@@ -8,34 +8,27 @@ import ConvolutionParameters from "../components/ConvolutionParameters";
 import EditableMatrix from "../components/EditableMatrix";
 import { conv2d } from "../logic/convolution";
 import { kernelPresets, inputPresets } from "../logic/presets";
+import { useConvolutionStore } from "../state/useStore";
 
 export default function Demo() {
-  const [input, setInput] = useState<number[][]>([
-    [1, 2, 3, 0, 1],
-    [0, 1, 2, 3, 1],
-    [3, 1, 0, 2, 2],
-    [2, 0, 1, 1, 0],
-    [1, 3, 2, 0, 1],
-  ]);
-  const [kernel, setKernel] = useState<number[][]>([
-    [1, 0, -1],
-    [1, 0, -1],
-    [1, 0, -1],
-  ]);
-  const [padding, setPadding] = useState(0);
-  const [stride, setStride] = useState(1);
-  const [dilation, setDilation] = useState(1);
+  const {
+    input,
+    kernel,
+    output,
+    config,
+    animation,
+    setInput,
+    setKernel,
+    setCurrentPos,
+    setCurrentCell,
+    setPartialSteps,
+    setIsPlaying,
+    setSpeed,
+    resetAnimation,
+  } = useConvolutionStore();
 
-  const [output, setOutput] = useState<number[][]>([]);
-
-  // Animation states
-  const [currentPos, setCurrentPos] = useState<[number, number] | null>(null); // cellule sortie active (i,j)
-  const [currentCell, setCurrentCell] = useState<[number, number] | null>(null); // cellule noyau active (u,v)
-  const [partialSteps, setPartialSteps] = useState<
-    { valIn: number; valK: number; prod: number; isPadding?: boolean }[]
-  >([]);
-  const [isPlaying, setIsPlaying] = useState(false);
-  const [speed, setSpeed] = useState(800);
+  const { padding, stride, dilation } = config;
+  const { currentPos, currentCell, partialSteps, isPlaying, speed } = animation;
 
   // Timer & re-entrance guards (browser)
   const intervalRef = useRef<number | null>(null);
@@ -46,48 +39,6 @@ export default function Demo() {
   const tempOut = conv2d(input, kernel, { padding, stride, dilation });
   const outH = tempOut.length;
   const outW = tempOut[0]?.length || 0;
-
-  // Auto-calcul du résultat quand les matrices ou paramètres changent
-  useEffect(() => {
-    try {
-      // Vérifier si les dimensions sont valides
-      if (
-        input.length > 0 &&
-        input[0].length > 0 &&
-        kernel.length > 0 &&
-        kernel[0].length > 0
-      ) {
-        // Vérifier que le kernel n'est pas plus grand que l'input (avec padding)
-        const maxInputDim = Math.max(input.length, input[0].length);
-        const maxKernelDim = Math.max(kernel.length, kernel[0].length);
-
-        if (maxKernelDim <= maxInputDim + 2 * padding) {
-          const result = conv2d(input, kernel, { padding, stride, dilation });
-
-          // Vérifier que le résultat n'est pas vide
-          if (result.length > 0 && result[0].length > 0) {
-            setOutput(result);
-
-            // Réinitialiser l'animation si elle était en cours
-            if (currentPos || currentCell) {
-              setCurrentPos(null);
-              setCurrentCell(null);
-              setPartialSteps([]);
-              setIsPlaying(false);
-              clearTimer();
-            }
-          }
-        }
-      }
-    } catch (error) {
-      // En cas d'erreur, on ne met pas à jour le résultat
-      console.warn("Erreur lors du calcul automatique:", error);
-    }
-  }, [input, kernel, padding, stride, dilation, currentPos, currentCell]);
-
-  const handleCompute = () => {
-    setOutput(conv2d(input, kernel, { padding, stride, dilation }));
-  };
 
   const clearTimer = () => {
     if (intervalRef.current !== null) {
@@ -186,23 +137,20 @@ export default function Demo() {
     if (shouldResetSteps) {
       setPartialSteps([{ valIn, valK, prod, isPadding }]);
     } else {
-      setPartialSteps((steps) => {
-        console.log("setPartialSteps", { valIn, valK, prod, isPadding });
-        // Protection contre les doublons en mode strict
-        const alreadyExists = steps.some(
-          (step) =>
-            step.valIn === valIn &&
-            step.valK === valK &&
-            step.prod === prod &&
-            step.isPadding === isPadding,
-        );
+      const currentSteps = partialSteps;
+      console.log("setPartialSteps", { valIn, valK, prod, isPadding });
+      // Protection contre les doublons en mode strict
+      const alreadyExists = currentSteps.some(
+        (step) =>
+          step.valIn === valIn &&
+          step.valK === valK &&
+          step.prod === prod &&
+          step.isPadding === isPadding,
+      );
 
-        if (alreadyExists) {
-          return steps; // Éviter le doublon
-        }
-
-        return [...steps, { valIn, valK, prod, isPadding }];
-      });
+      if (!alreadyExists) {
+        setPartialSteps([...currentSteps, { valIn, valK, prod, isPadding }]);
+      }
     }
 
     // Mettre à jour les positions
@@ -300,15 +248,7 @@ export default function Demo() {
       <h1 className="text-2xl font-bold">Démo Convolution</h1>
 
       {/* Paramètres de convolution */}
-      <ConvolutionParameters
-        padding={padding}
-        setPadding={setPadding}
-        stride={stride}
-        setStride={setStride}
-        dilation={dilation}
-        setDilation={setDilation}
-        onCompute={handleCompute}
-      />
+      <ConvolutionParameters />
 
       {/* Édition des matrices */}
       <div className="grid grid-cols-2 gap-6">
