@@ -268,6 +268,25 @@ export default function AnimationDemo() {
     return coords;
   };
 
+  // Highlights pour PaddedGrid : inclut toutes les cellules du kernel (y compris padding)
+  const getKernelCoverageForPaddedGrid = (pos: [number, number] | null) => {
+    if (!pos) return [];
+    const [i, j] = pos;
+    const coords: [number, number][] = [];
+    for (let u = 0; u < kernel.length; u++) {
+      for (let v = 0; v < kernel[0].length; v++) {
+        // Utiliser la même logique que conv2d et stepOnce
+        const ii = i * stride + u * dilation;
+        const jj = j * stride + v * dilation;
+        const originalI = ii - padding;
+        const originalJ = jj - padding;
+        // Inclure TOUTES les cellules du kernel, même celles dans le padding
+        coords.push([originalI, originalJ]);
+      }
+    }
+    return coords;
+  };
+
   const getCurrentCellHighlight = (): [number, number][] => {
     if (!currentPos || partialSteps.length === 0) return [];
 
@@ -388,7 +407,7 @@ export default function AnimationDemo() {
                   setMatrix={setInput}
                   padding={padding}
                   highlightCurrent={getCurrentCellHighlight()}
-                  highlightKernel={getKernelCoverage(currentPos)}
+                  highlightKernel={getKernelCoverageForPaddedGrid(currentPos)}
                 />
               ) : (
                 <Grid

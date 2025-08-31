@@ -65,12 +65,12 @@ export default function PaddedGrid({
 
               // Appliquer les couleurs de base
               if (isPadding) {
-                bg = "bg-gray-100 border-dashed"; // Couleur de fond et bordure pointillée pour les cellules de padding
+                bg = "bg-gray-100"; // Couleur de fond pour les cellules de padding
               } else {
                 bg = "bg-white"; // Couleur de fond pour les cellules normales
               }
 
-              // Appliquer les highlights par-dessus
+              // Appliquer les highlights par-dessus (priorité aux highlights)
               if (isKernel(i, j)) bg = "bg-green-200";
               if (isCurrent(i, j)) bg = "bg-yellow-300";
 
