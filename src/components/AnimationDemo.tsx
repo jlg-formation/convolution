@@ -238,6 +238,38 @@ export default function AnimationDemo() {
     return [currentCell];
   };
 
+  const getOutputAnimationState = () => {
+    if (!currentPos || outH === 0 || outW === 0) return undefined;
+
+    const [currentI, currentJ] = currentPos;
+
+    // Cellules déjà calculées (toutes les cellules avant la position actuelle)
+    const completedCells: [number, number][] = [];
+    for (let i = 0; i < outH; i++) {
+      for (let j = 0; j < outW; j++) {
+        if (i < currentI || (i === currentI && j < currentJ)) {
+          completedCells.push([i, j]);
+        }
+      }
+    }
+
+    // Cellules pas encore calculées (toutes les cellules après la position actuelle)
+    const pendingCells: [number, number][] = [];
+    for (let i = 0; i < outH; i++) {
+      for (let j = 0; j < outW; j++) {
+        if (i > currentI || (i === currentI && j > currentJ)) {
+          pendingCells.push([i, j]);
+        }
+      }
+    }
+
+    return {
+      currentCell: currentPos,
+      completedCells,
+      pendingCells,
+    };
+  };
+
   return (
     <div className="space-y-6">
       <h2 className="text-xl font-semibold">Animation Step-by-Step</h2>
@@ -262,15 +294,8 @@ export default function AnimationDemo() {
         setSpeed={setSpeed}
       />
 
-      {output.length > 0 && (
-        <div>
-          <h3 className="mb-2 font-semibold">Résultat (instantané)</h3>
-          <Grid matrix={output} readOnly />
-        </div>
-      )}
-
       {currentPos && (
-        <div className="grid grid-cols-2 gap-6">
+        <div className="grid grid-cols-3 gap-6">
           <div>
             <h3 className="mb-2 font-semibold">Entrée (surbrillance)</h3>
             <Grid
@@ -288,6 +313,21 @@ export default function AnimationDemo() {
               highlight={getKernelHighlight()}
             />
           </div>
+          <div>
+            <h3 className="mb-2 font-semibold">Sortie (construction)</h3>
+            <Grid
+              matrix={output}
+              readOnly
+              animationState={getOutputAnimationState()}
+            />
+          </div>
+        </div>
+      )}
+
+      {!currentPos && output.length > 0 && (
+        <div>
+          <h3 className="mb-2 font-semibold">Résultat (instantané)</h3>
+          <Grid matrix={output} readOnly />
         </div>
       )}
 

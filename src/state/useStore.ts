@@ -75,7 +75,7 @@ export const useConvolutionStore = create<ConvolutionStore>((set, get) => ({
     [1, 0, -1],
     [1, 0, -1],
   ],
-  output: [],
+  output: [], // Sera calculé dans computeConvolution
 
   // Configuration initiale
   config: {
@@ -173,3 +173,6 @@ export const useConvolutionStore = create<ConvolutionStore>((set, get) => ({
     });
   },
 }));
+
+// Initialiser le calcul de la convolution au démarrage
+useConvolutionStore.getState().computeConvolution();
