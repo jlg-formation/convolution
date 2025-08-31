@@ -5,6 +5,7 @@ import ControlsPanel from "../components/ControlsPanel";
 import AnimationBar from "../components/AnimationBar";
 import StepInspector from "../components/StepInspector";
 import ConvolutionVisualization from "../components/ConvolutionVisualization";
+import EditableMatrix from "../components/EditableMatrix";
 import { conv2d } from "../logic/convolution";
 
 export default function Demo() {
@@ -258,7 +259,25 @@ export default function Demo() {
   return (
     <div className="space-y-6">
       <h1 className="text-2xl font-bold">Démo Convolution</h1>
-
+      {/* Édition des matrices */}
+      <div className="grid grid-cols-2 gap-6">
+        <EditableMatrix
+          matrix={input}
+          setMatrix={setInput}
+          title="Matrice d'entrée"
+          minSize={3}
+          maxSize={15}
+          defaultValue={0}
+        />
+        <EditableMatrix
+          matrix={kernel}
+          setMatrix={setKernel}
+          title="Noyau (Kernel)"
+          minSize={1}
+          maxSize={7}
+          defaultValue={0}
+        />
+      </div>
       {/* Vue conceptuelle de la convolution */}
       <ConvolutionVisualization
         input={input}
@@ -268,10 +287,9 @@ export default function Demo() {
         stride={stride}
         dilation={dilation}
       />
-
       <div className="grid grid-cols-2 gap-6">
         <div>
-          <h2 className="mb-2 font-semibold">Matrice d’entrée</h2>
+          <h2 className="mb-2 font-semibold">Matrice d'entrée</h2>
           {/* grille principale éditable */}
           <Grid matrix={input} setMatrix={setInput} />
         </div>
@@ -279,8 +297,7 @@ export default function Demo() {
           <h2 className="mb-2 font-semibold">Noyau (Kernel)</h2>
           <KernelEditor kernel={kernel} setKernel={setKernel} />
         </div>
-      </div>
-
+      </div>{" "}
       <ControlsPanel
         padding={padding}
         setPadding={setPadding}
@@ -290,7 +307,6 @@ export default function Demo() {
         setDilation={setDilation}
         onCompute={handleCompute}
       />
-
       {padding > 0 && (
         <div className="rounded border border-blue-200 bg-blue-50 p-3">
           <p className="text-sm text-blue-800">
@@ -300,7 +316,6 @@ export default function Demo() {
           </p>
         </div>
       )}
-
       <AnimationBar
         isPlaying={isPlaying}
         onPlay={() => {
@@ -320,14 +335,12 @@ export default function Demo() {
         speed={speed}
         setSpeed={setSpeed}
       />
-
       {output.length > 0 && (
         <div>
           <h2 className="mb-2 font-semibold">Résultat (instantané)</h2>
           <Grid matrix={output} readOnly />
         </div>
       )}
-
       {currentPos && (
         <div className="grid grid-cols-2 gap-6">
           <div>
@@ -349,7 +362,6 @@ export default function Demo() {
           </div>
         </div>
       )}
-
       {currentPos && currentCell && (
         <StepInspector
           input={input}
