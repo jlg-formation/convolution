@@ -1,0 +1,1 @@
+// predefined kernels (Sobel, Laplace, etc.)
