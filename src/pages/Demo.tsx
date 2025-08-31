@@ -1,10 +1,8 @@
-import Grid from "../components/Grid";
-import KernelEditor from "../components/KernelEditor";
 import AnimationDemo from "../components/AnimationDemo";
-import ConvolutionVisualization from "../components/ConvolutionVisualization";
 import ConvolutionParameters from "../components/ConvolutionParameters";
+import ConvolutionVisualization from "../components/ConvolutionVisualization";
 import EditableMatrix from "../components/EditableMatrix";
-import { kernelPresets, inputPresets } from "../logic/presets";
+import { inputPresets, kernelPresets } from "../logic/presets";
 import { useConvolutionStore } from "../state/useStore";
 
 export default function Demo() {

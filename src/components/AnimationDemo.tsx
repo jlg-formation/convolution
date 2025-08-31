@@ -350,78 +350,73 @@ export default function AnimationDemo() {
   };
 
   return (
-    <div className="space-y-6">
-      <h2 className="text-xl font-semibold">Animation Step-by-Step</h2>
+    <div className="rounded-lg border bg-gray-50 p-6">
+      <div className="space-y-6">
+        <h2 className="text-xl font-semibold">Animation Step-by-Step</h2>
 
-      <AnimationBar
-        isPlaying={isPlaying}
-        onPlay={() => {
-          // init si nécessaire
-          if (!currentPos) {
-            setCurrentPos([0, 0]);
-            setCurrentCell([0, 0]);
-            setPartialSteps([]);
-          }
-          setIsPlaying(true);
-        }}
-        onPause={() => {
-          setIsPlaying(false);
-          clearTimer();
-        }}
-        onStep={doStep}
-        onReset={doReset}
-        speed={speed}
-        setSpeed={setSpeed}
-      />
-
-      {currentPos && (
-        <div className="grid grid-cols-3 gap-6">
-          <div>
-            <h3 className="mb-2 font-semibold">Entrée (surbrillance)</h3>
-            <Grid
-              matrix={input}
-              setMatrix={setInput}
-              highlightCurrent={getCurrentCellHighlight()}
-              highlightKernel={getKernelCoverage(currentPos)}
-            />
-          </div>
-          <div>
-            <h3 className="mb-2 font-semibold">Kernel (surbrillance)</h3>
-            <KernelEditor
-              kernel={kernel}
-              setKernel={setKernel}
-              highlight={getKernelHighlight()}
-            />
-          </div>
-          <div>
-            <h3 className="mb-2 font-semibold">Sortie (construction)</h3>
-            <Grid
-              matrix={output}
-              readOnly
-              animationState={getOutputAnimationState()}
-            />
-          </div>
-        </div>
-      )}
-
-      {!currentPos && output.length > 0 && (
-        <div>
-          <h3 className="mb-2 font-semibold">Résultat (instantané)</h3>
-          <Grid matrix={output} readOnly />
-        </div>
-      )}
-
-      {currentPos && (
-        <StepInspector
-          input={input}
-          kernel={kernel}
-          topLeft={[
-            currentPos[0] * stride - padding,
-            currentPos[1] * stride - padding,
-          ]}
-          steps={partialSteps}
+        <AnimationBar
+          isPlaying={isPlaying}
+          onPlay={() => {
+            // init si nécessaire
+            if (!currentPos) {
+              setCurrentPos([0, 0]);
+              setCurrentCell([0, 0]);
+              setPartialSteps([]);
+            }
+            setIsPlaying(true);
+          }}
+          onPause={() => {
+            setIsPlaying(false);
+            clearTimer();
+          }}
+          onStep={doStep}
+          onReset={doReset}
+          speed={speed}
+          setSpeed={setSpeed}
         />
-      )}
+
+        {currentPos && (
+          <div className="grid grid-cols-3 gap-6">
+            <div>
+              <h3 className="mb-2 font-semibold">Entrée (surbrillance)</h3>
+              <Grid
+                matrix={input}
+                setMatrix={setInput}
+                highlightCurrent={getCurrentCellHighlight()}
+                highlightKernel={getKernelCoverage(currentPos)}
+              />
+            </div>
+            <div>
+              <h3 className="mb-2 font-semibold">Kernel (surbrillance)</h3>
+              <KernelEditor
+                kernel={kernel}
+                setKernel={setKernel}
+                highlight={getKernelHighlight()}
+              />
+            </div>
+            <div>
+              <h3 className="mb-2 font-semibold">Sortie (construction)</h3>
+              <Grid
+                matrix={output}
+                readOnly
+                animationState={getOutputAnimationState()}
+              />
+            </div>
+          </div>
+        )}
+
+        {currentPos && (
+          <StepInspector
+            input={input}
+            kernel={kernel}
+            topLeft={[
+              currentPos[0] * stride - padding,
+              currentPos[1] * stride - padding,
+            ]}
+            steps={partialSteps}
+          />
+        )}
+      </div>
     </div>
   );
 }
