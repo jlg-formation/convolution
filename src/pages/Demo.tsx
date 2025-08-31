@@ -3,6 +3,7 @@ import Grid from "../components/Grid";
 import KernelEditor from "../components/KernelEditor";
 import ControlsPanel from "../components/ControlsPanel";
 import AnimationBar from "../components/AnimationBar";
+import StepInspector from "../components/StepInspector";
 import { conv2d } from "../logic/convolution";
 
 export default function Demo() {
@@ -64,6 +65,23 @@ export default function Demo() {
     };
   }, [isPlaying, speed]);
 
+  // Fonction pour trouver les coordonnées couvertes par le kernel
+  const getHighlight = (pos: [number, number] | null) => {
+    if (!pos) return [];
+    const [i, j] = pos;
+    const coords: [number, number][] = [];
+    for (let u = 0; u < kernel.length; u++) {
+      for (let v = 0; v < kernel[0].length; v++) {
+        const ii = i * stride + u * dilation - padding;
+        const jj = j * stride + v * dilation - padding;
+        if (ii >= 0 && jj >= 0 && ii < input.length && jj < input[0].length) {
+          coords.push([ii, jj]);
+        }
+      }
+    }
+    return coords;
+  };
+
   return (
     <div className="space-y-6">
       <h1 className="text-2xl font-bold">Démo Convolution</h1>
@@ -106,10 +124,20 @@ export default function Demo() {
       )}
 
       {currentPos && (
-        <div>
-          <h2 className="mb-2 font-semibold">
-            Position animée : {`(${currentPos[0]}, ${currentPos[1]})`}
-          </h2>
+        <div className="grid grid-cols-2 gap-6">
+          <Grid
+            matrix={input}
+            setMatrix={setInput}
+            highlight={getHighlight(currentPos)}
+          />
+          <StepInspector
+            input={input}
+            kernel={kernel}
+            topLeft={[
+              currentPos[0] * stride - padding,
+              currentPos[1] * stride - padding,
+            ]}
+          />
         </div>
       )}
     </div>
