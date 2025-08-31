@@ -1,7 +1,8 @@
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import Grid from "../components/Grid";
 import KernelEditor from "../components/KernelEditor";
 import ControlsPanel from "../components/ControlsPanel";
+import AnimationBar from "../components/AnimationBar";
 import { conv2d } from "../logic/convolution";
 
 export default function Demo() {
@@ -20,12 +21,48 @@ export default function Demo() {
   const [padding, setPadding] = useState(0);
   const [stride, setStride] = useState(1);
   const [dilation, setDilation] = useState(1);
+
+  // Résultat complet (calcul instantané)
   const [output, setOutput] = useState<number[][]>([]);
 
+  // Animation state
+  const [currentPos, setCurrentPos] = useState<[number, number] | null>(null);
+  const [isPlaying, setIsPlaying] = useState(false);
+  const [speed, setSpeed] = useState(800);
+  const intervalRef = useRef<NodeJS.Timeout | null>(null);
+
+  // Pre-calc output dimensions
+  const tempOut = conv2d(input, kernel, { padding, stride, dilation });
+  const outH = tempOut.length;
+  const outW = tempOut[0]?.length || 0;
+
   const handleCompute = () => {
-    const result = conv2d(input, kernel, { padding, stride, dilation });
-    setOutput(result);
+    setOutput(conv2d(input, kernel, { padding, stride, dilation }));
   };
+
+  // Animation stepping
+  const step = () => {
+    setCurrentPos((prev) => {
+      if (!prev) return [0, 0];
+      const [i, j] = prev;
+      if (j + 1 < outW) return [i, j + 1];
+      if (i + 1 < outH) return [i + 1, 0];
+      setIsPlaying(false);
+      return null;
+    });
+  };
+
+  // Gestion lecture automatique
+  useEffect(() => {
+    if (isPlaying) {
+      intervalRef.current = setInterval(step, speed);
+    } else {
+      if (intervalRef.current) clearInterval(intervalRef.current);
+    }
+    return () => {
+      if (intervalRef.current) clearInterval(intervalRef.current);
+    };
+  }, [isPlaying, speed]);
 
   return (
     <div className="space-y-6">
@@ -52,10 +89,27 @@ export default function Demo() {
         onCompute={handleCompute}
       />
 
+      <AnimationBar
+        isPlaying={isPlaying}
+        onPlay={() => setIsPlaying(true)}
+        onPause={() => setIsPlaying(false)}
+        onStep={step}
+        speed={speed}
+        setSpeed={setSpeed}
+      />
+
       {output.length > 0 && (
         <div>
-          <h2 className="mb-2 font-semibold">Résultat</h2>
+          <h2 className="mb-2 font-semibold">Résultat (instantané)</h2>
           <Grid matrix={output} readOnly />
+        </div>
+      )}
+
+      {currentPos && (
+        <div>
+          <h2 className="mb-2 font-semibold">
+            Position animée : {`(${currentPos[0]}, ${currentPos[1]})`}
+          </h2>
         </div>
       )}
     </div>
