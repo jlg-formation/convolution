@@ -74,24 +74,33 @@ export default function Demo() {
     if (steppingRef.current) return;
     steppingRef.current = true;
 
+    if (!currentPos || !currentCell) {
+      steppingRef.current = false;
+      return;
+    }
+
+    const [i, j] = currentPos;
+    const [u, v] = currentCell;
+
+    // 1. D'abord faire le calcul de la cellule courante
+    const ii = i * stride + u * dilation - padding;
+    const jj = j * stride + v * dilation - padding;
+    const valIn =
+      ii >= 0 && jj >= 0 && ii < input.length && jj < input[0].length
+        ? input[ii][jj]
+        : 0;
+    const valK = kernel[u][v];
+    const prod = valIn * valK;
+
+    // trace partielle
+    setPartialSteps((steps) => [...steps, { valIn, valK, prod }]);
+
+    // 2. Ensuite avancer à la cellule suivante
     setCurrentPos((prevPos) => {
       const [i, j] = prevPos ?? [0, 0];
 
       setCurrentCell((prevCell) => {
         const [u, v] = prevCell ?? [0, 0];
-
-        // Coordonnées dans l’entrée pour (u,v)
-        const ii = i * stride + u * dilation - padding;
-        const jj = j * stride + v * dilation - padding;
-        const valIn =
-          ii >= 0 && jj >= 0 && ii < input.length && jj < input[0].length
-            ? input[ii][jj]
-            : 0;
-        const valK = kernel[u][v];
-        const prod = valIn * valK;
-
-        // trace partielle
-        setPartialSteps((steps) => [...steps, { valIn, valK, prod }]);
 
         // avancer d'UNE cellule dans le noyau
         if (v + 1 < kernel[0].length) {
@@ -140,13 +149,14 @@ export default function Demo() {
       setCurrentPos([0, 0]);
       setCurrentCell([0, 0]);
       setPartialSteps([]);
-      return;
+      return; // Premier clic = juste initialisation, on s'arrête là
     }
     if (!currentCell) {
       setCurrentCell([0, 0]);
-      return;
+      return; // Deuxième clic = initialisation kernel, on s'arrête là
     }
 
+    // Sinon, on fait un pas normal
     stepOnce();
   };
 
