@@ -1,1 +1,3 @@
-export default function KernelEditor() { return <div>KernelEditor</div> }
+export default function KernelEditor() {
+  return <div>KernelEditor</div>;
+}

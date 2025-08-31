@@ -1,1 +1,3 @@
-export default function ControlsPanel() { return <div>ControlsPanel</div> }
+export default function ControlsPanel() {
+  return <div>ControlsPanel</div>;
+}

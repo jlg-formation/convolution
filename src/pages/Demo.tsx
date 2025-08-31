@@ -1,1 +1,3 @@
-export default function Demo() { return <h1>Démo Convolution</h1> }
+export default function Demo() {
+  return <h1>Démo Convolution</h1>;
+}

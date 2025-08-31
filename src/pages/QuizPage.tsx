@@ -1,1 +1,3 @@
-export default function QuizPage() { return <h1>Quiz</h1> }
+export default function QuizPage() {
+  return <h1>Quiz</h1>;
+}

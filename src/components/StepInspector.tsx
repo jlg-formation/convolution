@@ -1,1 +1,3 @@
-export default function StepInspector() { return <div>StepInspector</div> }
+export default function StepInspector() {
+  return <div>StepInspector</div>;
+}

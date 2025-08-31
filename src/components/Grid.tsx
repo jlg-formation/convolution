@@ -1,1 +1,3 @@
-export default function Grid() { return <div>Grid</div> }
+export default function Grid() {
+  return <div>Grid</div>;
+}

@@ -1,1 +1,3 @@
-export default function CompareView() { return <div>CompareView</div> }
+export default function CompareView() {
+  return <div>CompareView</div>;
+}
