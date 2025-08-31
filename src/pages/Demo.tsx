@@ -4,6 +4,7 @@ import KernelEditor from "../components/KernelEditor";
 import ControlsPanel from "../components/ControlsPanel";
 import AnimationBar from "../components/AnimationBar";
 import StepInspector from "../components/StepInspector";
+import ConvolutionVisualization from "../components/ConvolutionVisualization";
 import { conv2d } from "../logic/convolution";
 
 export default function Demo() {
@@ -71,97 +72,110 @@ export default function Demo() {
 
   // === Un seul "pas" d'animation ===
   const stepOnce = () => {
+    console.log("stepOnce");
     if (steppingRef.current) return;
     steppingRef.current = true;
 
-    // Utiliser une seule fonction pour mettre à jour tous les états de manière atomique
-    setCurrentPos((prevPos) => {
-      if (!prevPos) {
-        steppingRef.current = false;
-        return prevPos;
-      }
+    // Récupérer les valeurs actuelles des états
+    const currentPosValue = currentPos;
+    const currentCellValue = currentCell;
 
-      const [i, j] = prevPos;
+    if (!currentPosValue || !currentCellValue) {
+      steppingRef.current = false;
+      return;
+    }
 
-      // Récupérer currentCell de manière synchrone
-      const currentCellValue = currentCell;
-      if (!currentCellValue) {
-        steppingRef.current = false;
-        return prevPos;
-      }
+    const [i, j] = currentPosValue;
+    const [u, v] = currentCellValue;
 
-      const [u, v] = currentCellValue;
+    // 1. Faire le calcul de la cellule courante
+    // Utiliser la même logique que conv2d : coordonnées dans la matrice paddée
+    const ii = i * stride + u * dilation;
+    const jj = j * stride + v * dilation;
 
-      // 1. Faire le calcul de la cellule courante
-      // Utiliser la même logique que conv2d : coordonnées dans la matrice paddée
-      const ii = i * stride + u * dilation;
-      const jj = j * stride + v * dilation;
+    // Convertir les coordonnées paddées vers les coordonnées originales
+    const originalI = ii - padding;
+    const originalJ = jj - padding;
 
-      // Convertir les coordonnées paddées vers les coordonnées originales
-      const originalI = ii - padding;
-      const originalJ = jj - padding;
+    const isPadding = !(
+      originalI >= 0 &&
+      originalJ >= 0 &&
+      originalI < input.length &&
+      originalJ < input[0].length
+    );
+    const valIn = isPadding ? 0 : input[originalI][originalJ];
+    const valK = kernel[u][v];
+    const prod = valIn * valK;
 
-      const isPadding = !(
-        originalI >= 0 &&
-        originalJ >= 0 &&
-        originalI < input.length &&
-        originalJ < input[0].length
-      );
-      const valIn = isPadding ? 0 : input[originalI][originalJ];
-      const valK = kernel[u][v];
-      const prod = valIn * valK;
+    // 2. Calculer la prochaine position du kernel
+    let nextU = u;
+    let nextV = v;
+    let nextI = i;
+    let nextJ = j;
+    let shouldResetSteps = false;
+    let shouldStop = false;
 
-      // Ajouter à la trace partielle
-      setPartialSteps((steps) => [...steps, { valIn, valK, prod, isPadding }]);
+    // Avancer dans le kernel
+    if (v + 1 < kernel[0].length) {
+      nextV = v + 1;
+    } else if (u + 1 < kernel.length) {
+      nextU = u + 1;
+      nextV = 0;
+    } else {
+      // Fin du balayage du noyau
+      shouldResetSteps = true;
+      nextU = 0;
+      nextV = 0;
 
-      // 2. Calculer la prochaine position du kernel
-      let nextU = u;
-      let nextV = v;
-      let nextI = i;
-      let nextJ = j;
-      let shouldResetSteps = false;
-      let shouldStop = false;
-
-      // Avancer dans le kernel
-      if (v + 1 < kernel[0].length) {
-        nextV = v + 1;
-      } else if (u + 1 < kernel.length) {
-        nextU = u + 1;
-        nextV = 0;
+      // Avancer la cellule de sortie
+      if (j + 1 < outW) {
+        nextJ = j + 1;
+      } else if (i + 1 < outH) {
+        nextI = i + 1;
+        nextJ = 0;
       } else {
-        // Fin du balayage du noyau
-        shouldResetSteps = true;
-        nextU = 0;
-        nextV = 0;
+        // Fin totale
+        shouldStop = true;
+      }
+    }
 
-        // Avancer la cellule de sortie
-        if (j + 1 < outW) {
-          nextJ = j + 1;
-        } else if (i + 1 < outH) {
-          nextI = i + 1;
-          nextJ = 0;
-        } else {
-          // Fin totale
-          shouldStop = true;
+    // 3. Appliquer tous les changements d'état de manière séparée
+    console.log("about to set partialSteps");
+
+    // Mettre à jour partialSteps
+    if (shouldResetSteps) {
+      setPartialSteps([{ valIn, valK, prod, isPadding }]);
+    } else {
+      setPartialSteps((steps) => {
+        console.log("setPartialSteps", { valIn, valK, prod, isPadding });
+        // Protection contre les doublons en mode strict
+        const alreadyExists = steps.some(
+          (step) =>
+            step.valIn === valIn &&
+            step.valK === valK &&
+            step.prod === prod &&
+            step.isPadding === isPadding,
+        );
+
+        if (alreadyExists) {
+          return steps; // Éviter le doublon
         }
-      }
 
-      // Appliquer les changements
-      if (shouldResetSteps) {
-        setPartialSteps([]);
-      }
+        return [...steps, { valIn, valK, prod, isPadding }];
+      });
+    }
 
-      if (shouldStop) {
-        setIsPlaying(false);
-        setCurrentCell(null);
-        steppingRef.current = false;
-        return null;
-      } else {
-        setCurrentCell([nextU, nextV]);
-        steppingRef.current = false;
-        return [nextI, nextJ];
-      }
-    });
+    // Mettre à jour les positions
+    if (shouldStop) {
+      setIsPlaying(false);
+      setCurrentCell(null);
+      setCurrentPos(null);
+    } else {
+      setCurrentCell([nextU, nextV]);
+      setCurrentPos([nextI, nextJ]);
+    }
+
+    steppingRef.current = false;
   };
 
   // Assigner stepOnce à la ref pour l'utiliser dans useEffect
@@ -169,6 +183,7 @@ export default function Demo() {
 
   // Bouton STEP: on PAUSE d'abord, puis on fait un seul pas
   const doStep = () => {
+    console.log("doStep");
     setIsPlaying(false);
     clearTimer();
 
@@ -243,6 +258,16 @@ export default function Demo() {
   return (
     <div className="space-y-6">
       <h1 className="text-2xl font-bold">Démo Convolution</h1>
+
+      {/* Vue conceptuelle de la convolution */}
+      <ConvolutionVisualization
+        input={input}
+        kernel={kernel}
+        output={output}
+        padding={padding}
+        stride={stride}
+        dilation={dilation}
+      />
 
       <div className="grid grid-cols-2 gap-6">
         <div>
